@@ -1,0 +1,6 @@
+# O projeto Laravel gerado fica em src/. Remova as linhas abaixo se quiser versioná-lo.
+src/*
+!src/.gitkeep
+
+# Metadados do Windows (arquivos baixados/extraídos de .zip)
+*:Zone.Identifier

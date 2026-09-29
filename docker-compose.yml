@@ -1,0 +1,97 @@
+name: laravel-lab
+
+x-lab-build: &lab-build
+  context: .
+  args:
+    HOST_UID: ${HOST_UID:-1000}
+    HOST_GID: ${HOST_GID:-1000}
+
+x-lab-env: &lab-env
+  LARAVEL_VERSION: ${LARAVEL_VERSION:-}
+  LAB_APP_URL: http://localhost:${APP_PORT:-8000}
+  LAB_DB_HOST: mysql
+  LAB_DB_PORT: "3306"
+  LAB_DB_DATABASE: ${DB_DATABASE:-laravel_lab}
+  LAB_DB_USERNAME: ${DB_USERNAME:-lab}
+  LAB_DB_PASSWORD: ${DB_PASSWORD:-lab_secret}
+
+services:
+  # Aplicação Laravel (servidor de desenvolvimento do artisan, porta 8000).
+  # Na primeira execução baixa o Laravel, aplica os exemplos do guia,
+  # roda as migrations e os seeders.
+  app:
+    build: *lab-build
+    image: laravel-lab:latest
+    container_name: laravel-lab-app
+    environment:
+      <<: *lab-env
+      LAB_ROLE: app
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - ./src:/var/www/html
+      - composer_cache:/home/app/.cache/composer
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/up"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 600s
+    restart: unless-stopped
+
+  # Worker (processo em segundo plano) que consome a fila de jobs.
+  queue:
+    build: *lab-build
+    image: laravel-lab:latest
+    container_name: laravel-lab-queue
+    command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=1", "--max-time=3600", "-v"]
+    environment:
+      <<: *lab-env
+      LAB_ROLE: queue
+    volumes:
+      - ./src:/var/www/html
+      - composer_cache:/home/app/.cache/composer
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.4
+    container_name: laravel-lab-mysql
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-laravel_lab}
+      MYSQL_USER: ${DB_USERNAME:-lab}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-lab_secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
+    ports:
+      - "${DB_PORT_HOST:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
+  # Interface web para inspecionar o banco (opcional): docker compose --profile tools up -d
+  adminer:
+    image: adminer:latest
+    container_name: laravel-lab-adminer
+    profiles: ["tools"]
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+  composer_cache:
