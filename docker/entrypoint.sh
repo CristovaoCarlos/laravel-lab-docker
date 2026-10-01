@@ -87,17 +87,15 @@ if [ ! -f vendor/autoload.php ]; then
   composer install --no-interaction --prefer-dist
 fi
 
-# 3) Primeira execução: configura o .env, instala a API (Sanctum), aplica os exemplos do guia.
+# 3) Primeira execução: configura o .env, instala a API (Sanctum).
 if [ ! -f .lab-bootstrapped ]; then
   log "primeira execução: configurando o laboratório..."
   configure_env
 
-  log "instalando suporte a API (php artisan install:api, inclui o Sanctum)..."
-  php artisan install:api --no-interaction
-
-  log "aplicando os exemplos do guia sobre o projeto..."
-  cp -R /opt/overlay/. "$APP_DIR"/
-  composer dump-autoload --no-interaction
+  if ! grep -q '"laravel/sanctum"' composer.json; then
+    log "instalando suporte a API (php artisan install:api, inclui o Sanctum)..."
+    php artisan install:api --no-interaction
+  fi
 
   migrate_with_retry
   php artisan db:seed --force

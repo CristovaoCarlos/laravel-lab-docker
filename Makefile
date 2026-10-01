@@ -26,3 +26,6 @@ tinker:        ## console interativo do Laravel
 
 tools:         ## sobe também o Adminer (interface web do banco)
 	docker compose --profile tools up -d
+
+controller:		## criar novo controller 
+	docker compose exec app php artisan make:controller

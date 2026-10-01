@@ -21,9 +21,6 @@ RUN groupadd --non-unique --gid "${HOST_GID}" app \
  && mkdir -p /var/www/html /home/app/.cache/composer /home/app/.config/composer \
  && chown -R "${HOST_UID}:${HOST_GID}" /var/www/html /home/app
 
-# Arquivos do laboratório (models, testes, rotas...) aplicados sobre o Laravel
-# recém-instalado na primeira execução.
-COPY --chown=${HOST_UID}:${HOST_GID} overlay /opt/overlay
 COPY docker/entrypoint.sh /usr/local/bin/lab-entrypoint
 RUN sed -i 's/\r$//' /usr/local/bin/lab-entrypoint && chmod +x /usr/local/bin/lab-entrypoint
 
